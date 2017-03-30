@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">RefreshRecyclerView</string>
+    <string name="recycler_view_refreshing_text">正在刷新</string>
+    <string name="recycler_view_pre_refresh_text">下拉刷新</string>
+    <string name="recycler_view_refreshed_text">刷新成功！</string>
+    <string name="recycler_view_refresh_failed_text">刷新失败！</string>
+    <string name="recycler_view_refresh_empty_text">数据为空</string>
+</resources>
