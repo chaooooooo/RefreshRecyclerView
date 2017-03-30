@@ -31,7 +31,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     private static final int EMPTY = 1 << 2;       //  0000100
     private static final int ERROR = 1<< 3;        //  0001000
     private static final int MORE = 1<< 4;         //  0010000
-    private static final int LOAD_STATE_MASK = 0x1f;
+    private static final int LOAD_STATE_MASK = 0xffff;
 
     static final int REFRESH_IDLE = 1 << 16;        //没有下拉
     static final int REFRESH_REFRESHING = 1 << 17;  // 正在刷新
@@ -40,8 +40,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     static final int REFRESH_EMPTY = 1 << 20;   //数据为空
     static final int REFRESH_INIT = 1 << 21;    //初始化状态
     static final int REFRESH_PULL = 1 << 22;    //下拉，还没到达刷新
+    static final int REFRESH_CANCEL = 1 << 23;    //下拉，还没到达刷新
 
-    static final int REFRESH_STATE_MASK = 0x7f0000;
+
+    static final int REFRESH_STATE_MASK = 0xffff0000;
 
     private static final boolean DEBUG = BuildConfig.DEBUG;
 
@@ -170,13 +172,22 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     void refreshData() {
+        LogHelper.i(TAG,"refreshData");
         if (isTaskRunning(mDataRefreshTask) || hasStatus(REFRESH_REFRESHING)) {
             return;
         }
         startRefreshData();
     }
 
+    private void stopRefreshData() {
+        LogHelper.i(TAG,"stopRefreshData");
+        if (mDataRefreshTask != null) {
+            mDataRefreshTask.cancel(true);
+        }
+    }
+
     private void startRefreshData() {
+        LogHelper.i(TAG,"startRefreshData");
 
         if (isTaskRunning(mDataRefreshTask) || hasStatus(REFRESH_REFRESHING)) {
             return;
@@ -185,6 +196,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
+                stopLoadingData();
                 toRefreshStatus(REFRESH_REFRESHING);
                 mDataLoader.onPreFetch();
             }
@@ -201,11 +213,26 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
                 appendRefreshData(result);
                 mDataLoader.onFetchDone(result);
             }
+
+            @Override
+            protected void onCancelled(DataItemResult dataItemDetails) {
+                super.onCancelled(dataItemDetails);
+                toRefreshStatus(REFRESH_CANCEL);
+                toRefreshStatus(REFRESH_PULL);
+            }
         };
         mDataRefreshTask.executeOnPool();
     }
 
+    private void stopLoadingData() {
+        LogHelper.i(TAG,"stopLoadingData");
+        if (mDataLoaderTask != null) {
+            mDataLoaderTask.cancel(true);
+        }
+    }
+
     private synchronized void startLoadingData() {
+
         if (isTaskRunning(mDataLoaderTask) || hasStatus(LOADING)) {
             return;
         }
@@ -227,6 +254,12 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             protected void onTaskFinished(DataItemResult result) {
                 appendData(result);
                 mDataLoader.onFetchDone(result);
+            }
+
+            @Override
+            protected void onCancelled(DataItemResult dataItemDetails) {
+                super.onCancelled(dataItemDetails);
+                toLoadStatus(IDLE);
             }
         };
         mDataLoaderTask.executeOnPool();
@@ -263,7 +296,6 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     void setMoreCellClass(Class<? extends DataRecyclerCell> emptyCell, Object cellClassConstructorParameter) {
         mErrorOrganizer.setCellClass(emptyCell, cellClassConstructorParameter);
     }
-
 
 
     private class DataViewHolder extends RecyclerView.ViewHolder {
@@ -431,10 +463,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
     private volatile int mStatus = IDLE | REFRESH_IDLE;
 
-    private final Object mLoadStatusLock = new Object();
+    private final Object mStatusLock = new Object();
 
     private void toLoadStatus(int status) {
-        synchronized (mLoadStatusLock) {
+        synchronized (mStatusLock) {
 
             int oldLoadStatus = mStatus & LOAD_STATE_MASK;
             int newLoadStatus = status & LOAD_STATE_MASK;
@@ -445,7 +477,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             mStatus = mStatus & ~LOAD_STATE_MASK | newLoadStatus;
 
             if (DEBUG) {
-                LogHelper.d(TAG, "to status : " + statusText(status));
+                LogHelper.d(TAG, "to load status : " + statusText(mStatus));
             }
 
         }
@@ -453,7 +485,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     private void toRefreshStatus(int status) {
-        synchronized (mLoadStatusLock) {
+        synchronized (mStatusLock) {
             int oldRefreshStatus = mStatus & REFRESH_STATE_MASK;
             int newRefreshStatus = status & REFRESH_STATE_MASK;
             if ((oldRefreshStatus ^ newRefreshStatus) == 0) {
@@ -462,7 +494,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             mStatus = mStatus & ~REFRESH_STATE_MASK | newRefreshStatus;
 
-            if (mHeaderCell != null ) {
+            if (mHeaderCell != null ) {//setDataLoader时，mHeader可能还没有初始化，这种情况延迟到onBindViewHolder中mHeaderCell初始化时调用刷新
                 mHeaderCell.refreshStatusChanged(mStatus & REFRESH_STATE_MASK);
             }
 
@@ -475,7 +507,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     private void toStatus(int status) {
-        synchronized (mLoadStatusLock) {
+        synchronized (mStatusLock) {
             if (mStatus == status) return;
 
             mStatus = status;
@@ -487,7 +519,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     private void addStatus(int status) {
-        synchronized (mLoadStatusLock) {
+        synchronized (mStatusLock) {
             if ((mStatus & status) != 0) {
                 return;
             }
@@ -501,7 +533,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     private void removeStatus(int status) {
-        synchronized (mLoadStatusLock) {
+        synchronized (mStatusLock) {
             if ((mStatus & status) != 0) {
                 return;
             }
@@ -552,7 +584,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
                 statusText += " | REFRESH_DONE";
                 break;
             case REFRESH_PULL:
-                statusText = "REFRESH_PULL";
+                statusText += " | REFRESH_PULL";
+                break;
+            case REFRESH_CANCEL:
+                statusText += " | REFRESH_CANCEL";
                 break;
             default:
                 statusText += " | default";
@@ -594,14 +629,19 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             }
             mHeaderCell.onScrolled(recyclerView, dx, dy);
 
-            if (!mHeaderCell.overHeader()) {
+            LogHelper.i(TAG,"onScrolled");
+            if (!mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_IDLE);
-            } else if (!hasStatus(REFRESH_REFRESHING)) {
+            }
+            if (mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_PULL);
             }
-
-            if (mHeaderCell.overHeaderRefresh() && !hasStatus(LOADING | REFRESH_REFRESHING) && mRecyclerData.getDataCount() > 0) {
-                refreshData();
+            if (mHeaderCell.overHeader() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
+                mRecyclerView.stopScroll();
+            }
+            if (mHeaderCell.overHeaderRefresh() && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0 && mRecyclerData.getDataCount() > 0) {
+                LogHelper.i(TAG,"onScrolled. startLoadingData()");
+                startRefreshData();
             }
         }
 
@@ -614,6 +654,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
     private boolean hasMore() {
         return mRecyclerData.maxCount > mRecyclerData.getDataCount();
+    }
+
+    public boolean overHeader() {
+        return mHeaderCell.overHeader();
     }
 
     @Override

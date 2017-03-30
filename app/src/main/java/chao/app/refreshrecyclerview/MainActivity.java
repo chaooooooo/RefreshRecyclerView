@@ -1,10 +1,9 @@
 package chao.app.refreshrecyclerview;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 
 import chao.app.protocol.UIDebugHelper;
-import chao.app.uidebug.DebugHelperProxy;
 
 public class MainActivity extends AppCompatActivity {
 

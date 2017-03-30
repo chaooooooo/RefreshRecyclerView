@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import chao.app.protocol.LogHelper;
 import chao.app.refreshrecyclerview.R;
 
 /**
@@ -24,10 +25,13 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     private static final int REFRESH_DONE = DataRecyclerAdapter.REFRESH_DONE;    //刷新完成
     private static final int REFRESH_EMPTY = DataRecyclerAdapter.REFRESH_EMPTY;   //数据为空
     private static final int REFRESH_PULL = DataRecyclerAdapter.REFRESH_PULL;   //数据为空
+    private static final int REFRESH_CANCEL = DataRecyclerAdapter.REFRESH_CANCEL;   //数据为空
+
 
 
     private static final int REFRESH_STATE_MASK = DataRecyclerAdapter.REFRESH_STATE_MASK;
     private static final int REFRESH_STATUS_DELAY = 500;
+    private static final java.lang.String TAG = DataRecyclerHeaderCell.class.getSimpleName();
 
     private TextView mText = null;
     private ProgressBar mProgressBar;
@@ -42,6 +46,8 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     void detach() {
         mHandler.detach();
     }
+
+
 
     private class HeaderHandler extends Handler {
 
@@ -150,7 +156,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     }
 
     public boolean overHeaderRefresh() {
-        if (overHeader() && mScrollY == 0) {
+        if (overHeader() && mScrollY <= getHeaderHeight() / 4) {
             return true;
         }
         return false;
@@ -164,8 +170,12 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         if (!overHeader()) {
             return;
         }
-        if (newState == RecyclerView.SCROLL_STATE_IDLE && isStatus(REFRESH_PULL)) {
-            closeHeader(true);
+        if (newState == RecyclerView.SCROLL_STATE_IDLE ) {
+            if (isStatus(REFRESH_PULL)) {
+                closeHeader(true);
+            } else if (isStatus(REFRESH_REFRESHING)) {
+                gotoTop();
+            }
         }
     }
 
@@ -193,17 +203,29 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
                 break;
             case REFRESH_IDLE:
                 break;
+            case REFRESH_CANCEL:
+                break;
             default:
                 throw new IllegalStateException("unknown refresh status. " + DataRecyclerAdapter.statusText(newStatus));
         }
     }
 
+    public void gotoTop() {
+        if (!overHeader()) {
+            return;
+        }
+        mDataRecyclerView.smoothScrollToPosition(0);
+    }
+
     private void closeHeader(boolean animation) {
+        LogHelper.i(TAG,"closeHeader");
         int offsetY = getHeaderHeight() - mScrollY;
+//        DataLinearLayoutManager dlm = (DataLinearLayoutManager) mDataRecyclerView.getLayoutManager();
+//        dlm.offsetChildren(-getHeaderHeight());
         if (animation) {
-            mDataRecyclerView.smoothScrollBy(0, offsetY);
+            mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态
         } else {
-            mDataRecyclerView.scrollBy(0,offsetY);
+            mDataRecyclerView.scrollBy(0,offsetY + 1);
         }
     }
 
