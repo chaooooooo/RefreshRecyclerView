@@ -3,9 +3,12 @@ package chao.app.refreshrecyclerview.recycleview;
 import android.view.View;
 
 /**
- * Created by k.huang on 2017/3/20.
  */
 
 public interface OnItemEmptyClickListener {
+    /**
+     *
+     * @return return true消费点击事件，false让DataRecyclerView继续处理点击事件
+     */
     boolean onItemEmptyClickListener(View view);
 }

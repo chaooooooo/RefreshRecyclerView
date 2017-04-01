@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,10 +13,12 @@ import android.widget.TextView;
 import com.jobs.lib_v1.data.DataItemDetail;
 import com.jobs.lib_v1.data.DataItemResult;
 
+import chao.app.protocol.LogHelper;
 import chao.app.refreshrecyclerview.recycleview.DataLoader;
 import chao.app.refreshrecyclerview.recycleview.DataRecyclerAdapter;
 import chao.app.refreshrecyclerview.recycleview.DataRecyclerCell;
 import chao.app.refreshrecyclerview.recycleview.DataRecyclerView;
+import chao.app.refreshrecyclerview.recycleview.OnItemClickListener;
 
 /**
  * @author chao.qin
@@ -32,6 +35,23 @@ public class RefreshRecyclerViewTestFragment extends Fragment {
         View view = inflater.inflate(R.layout.refresh_recyclerview_fragment,container,false);
         final DataRecyclerView recyclerView = (DataRecyclerView) view.findViewById(R.id.data_recycler_view);
         recyclerView.setDataRecyclerCell(TestCell.class,this);
+        DataItemDetail detail = new DataItemDetail();
+        DataItemResult result = new DataItemResult();
+
+//        for (int i = 0; i < 10 ; i++) {
+//            DataItemDetail itemDetail = detail.Copy();
+//            itemDetail.setIntValue("No.", i);
+//            itemDetail.setStringValue("content", "This is a Recycler Test.");
+//            result.addItem(itemDetail);
+//        }
+//
+//        recyclerView.appendData(result);
+        recyclerView.setOnItemClickListener(new OnItemClickListener() {
+            @Override
+            public void onItemClickListener(RecyclerView recyclerView, View view, int position) {
+                LogHelper.i("chao.qin","position : "+position);
+            }
+        });
         recyclerView.setDataLoader(new DataLoader() {
             @Override
             public DataItemResult fetchData(DataRecyclerAdapter adapter, int pageAt, int pageSize) {

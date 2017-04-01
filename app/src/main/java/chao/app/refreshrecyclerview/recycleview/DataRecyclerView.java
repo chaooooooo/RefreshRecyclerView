@@ -12,6 +12,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 
 import com.jobs.lib_v1.data.DataItemResult;
 
@@ -185,12 +186,20 @@ public class DataRecyclerView extends RecyclerView {
     }
 
     public void setDataLoader(DataLoader dataLoader) {
+        //上拉刷新、下拉加载不能使用wrap_content，无法计算footer的高度
+        ViewGroup.LayoutParams lp = getLayoutParams();
+        lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        setLayoutParams(lp);
+
         mDataAdapter.setDataLoader(dataLoader);
     }
 
+    public void disablePullRefresh() {
+        mDataAdapter.disablePullRefresh();
+    }
 
-    public DataRecyclerAdapter getDataAdapter(){
-        return mDataAdapter;
+    public void disableAutoLoad() {
+        mDataAdapter.disableAutoLoad();
     }
 
 

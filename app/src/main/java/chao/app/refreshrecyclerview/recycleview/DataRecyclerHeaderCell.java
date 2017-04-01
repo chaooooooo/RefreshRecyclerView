@@ -16,6 +16,8 @@ import chao.app.refreshrecyclerview.R;
  */
 public class DataRecyclerHeaderCell extends DataRecyclerCell{
 
+    private static final String TAG = DataRecyclerHeaderCell.class.getSimpleName();
+
     private static final int HEADER_POSITION = 0;
 
     private static final int REFRESH_IDLE = DataRecyclerAdapter.REFRESH_IDLE;        //下拉状态但还没到达刷新或者没有下拉
@@ -27,10 +29,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     private static final int REFRESH_CANCEL = DataRecyclerAdapter.REFRESH_CANCEL;   //数据为空
 
 
-
-    private static final int REFRESH_STATE_MASK = DataRecyclerAdapter.REFRESH_STATE_MASK;
     private static final int REFRESH_STATUS_DELAY = 500;
-    private static final java.lang.String TAG = DataRecyclerHeaderCell.class.getSimpleName();
 
     private TextView mText = null;
     private ProgressBar mProgressBar;
@@ -162,20 +161,9 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         return false;
     }
 
+
     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
         mScrollY += dy;
-//        checkScrollY();
-
-    }
-
-    private void checkScrollY() {
-        LinearLayoutManager layoutManager = (LinearLayoutManager) mDataRecyclerView.getLayoutManager();
-        int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
-        if (firstVisibleItemPosition == 0 && mScrollY > getHeight()) {
-            mDataRecyclerView.offsetChildrenVertical(getCellView().getTop());
-            mDataRecyclerView.offsetChildrenVertical(-getHeight());
-            mScrollY = getHeight();
-        }
     }
 
     public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -227,7 +215,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
             return;
         }
         mDataRecyclerView.smoothScrollToPosition(0);
-        mAdapter.onHeaderOpened();
     }
 
     private void closeHeader(boolean animation) {
@@ -237,7 +224,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         } else {
             mDataRecyclerView.scrollBy(0,offsetY + 1);
         }
-        mAdapter.onHeaderClosed();
     }
 
     private int overScrollerLine() {
