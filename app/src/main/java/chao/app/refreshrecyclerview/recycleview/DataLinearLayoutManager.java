@@ -29,7 +29,6 @@ public class DataLinearLayoutManager extends LinearLayoutManager {
         if (consumed > 0) {
 //            mHelper.offsetChildren(unconsumed);
         }
-//        LogHelper.i("chao.qin","scrollVerticallyBy --> ","consumed : " + consumed,"unconsumed : " + (dy - consumed));
         return consumed;
     }
 

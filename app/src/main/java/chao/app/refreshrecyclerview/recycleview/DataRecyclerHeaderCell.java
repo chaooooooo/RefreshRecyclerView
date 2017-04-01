@@ -46,8 +46,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         mHandler.detach();
     }
 
-
-
     private class HeaderHandler extends Handler {
 
         private static final int WHAT_REFRESH_STARTED = 1;
@@ -229,24 +227,17 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
             return;
         }
         mDataRecyclerView.smoothScrollToPosition(0);
+        mAdapter.onHeaderOpened();
     }
 
     private void closeHeader(boolean animation) {
-//        LogHelper.i(TAG,"closeHeader");
         int offsetY = getHeight() - mScrollY;
-//        DataLinearLayoutManager dlm = (DataLinearLayoutManager) mDataRecyclerView.getLayoutManager();
-//        dlm.offsetChildren(-getHeaderHeight());
         if (animation) {
             mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态
         } else {
             mDataRecyclerView.scrollBy(0,offsetY + 1);
         }
-
-    }
-
-    public void back(DataRecyclerView recyclerView) {
-//        recyclerView.scrollBy(0,overScrollerLine() - mScrollY);
-//        recyclerView.smoothScrollBy(0,getHeight() - overScrollerLine());
+        mAdapter.onHeaderClosed();
     }
 
     private int overScrollerLine() {

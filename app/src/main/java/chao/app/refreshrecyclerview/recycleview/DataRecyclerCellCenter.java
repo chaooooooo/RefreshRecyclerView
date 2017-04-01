@@ -31,49 +31,6 @@ public final class DataRecyclerCellCenter {
 		return cellClass;
 	}
 
-	/**
-	 * 获取出错单元格的配置器
-	 * 配置器中会被设上默认的出错单元格
-	 *
-	 * @return DataRecyclerCellOrganizer
-	 */
-	public final static DataRecyclerCellOrganizer errorOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("errorCellClass", DataRecyclerErrorCell.class);
-		return new DataRecyclerCellOrganizer(adapter, cellClass);
-	}
-
-	/**
-	 * 获取数据为空单元格的配置器
-	 * 配置器中会被设上默认的数据为空单元格
-	 *
-	 * @return DataRecyclerCellOrganizer
-	 */
-	public final static DataRecyclerCellOrganizer emptyOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("emptyCellClass", DataRecyclerEmptyCell.class);
-		return new DataRecyclerCellOrganizer(adapter, cellClass);
-	}
-
-	/**
-	 * 获取加载中单元格的配置器
-	 * 配置器中会被设上默认的加载中单元格
-	 *
-	 * @return DataRecyclerCellOrganizer
-	 */
-	public final static DataRecyclerCellOrganizer loadingOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("loadingCellClass", DataRecyclerLoadingCell.class);
-		return new DataRecyclerCellOrganizer(adapter, cellClass);
-	}
-
-	/**
-	 * 获取下一页单元格的配置器
-	 * 配置器中会被设上默认的下一页单元格
-	 *
-	 * @return DataRecyclerCellOrganizer
-	 */
-	public final static DataRecyclerCellOrganizer moreOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("moreCellClass", DataRecyclerMoreCell.class);
-		return new DataRecyclerCellOrganizer(adapter, cellClass);
-	}
 
 	/**
 	 * 获取数据单元格的配置器
@@ -91,13 +48,9 @@ public final class DataRecyclerCellCenter {
 		return new DataRecyclerCellOrganizer(adapter, cellClass);
 	}
 
-	public static DataRecyclerCellOrganizer idleOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("idleCellClass", DataRecyclerIdleCell.class);
-		return new DataRecyclerCellOrganizer(adapter, cellClass);
-	}
 
 	public static DataRecyclerCellOrganizer footerOrganizer(DataRecyclerAdapter adapter) {
-		Class<?> cellClass = getDefaultCellClass("footerCellClass", DataRecyclerLoadingCell.class);
+		Class<?> cellClass = getDefaultCellClass("footerCellClass", DataRecyclerFooterCell.class);
 		return new DataRecyclerCellOrganizer(adapter, cellClass);
 	}
 }

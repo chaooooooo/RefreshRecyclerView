@@ -49,8 +49,7 @@ public class DataRecyclerView extends RecyclerView {
 
     private void init(Context context) {
         mDataAdapter = new DataRecyclerAdapter(this);
-        mLayoutManager = new DataLinearLayoutManager(context,LinearLayoutManager.VERTICAL,false);
-//        mLayoutManager = new LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false);
+        mLayoutManager = new LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false);
         setLayoutManager(mLayoutManager);
         setAdapter(mDataAdapter);
 
@@ -66,11 +65,13 @@ public class DataRecyclerView extends RecyclerView {
 
     @Override
     public void requestLayout() {
-        super.requestLayout();
         if (mDataAdapter == null) {
+            super.requestLayout();
             return;
         }
-        mDataAdapter.requestLayout();
+        if (mDataAdapter.canRequestLayout()) {
+            super.requestLayout();
+        }
     }
 
 

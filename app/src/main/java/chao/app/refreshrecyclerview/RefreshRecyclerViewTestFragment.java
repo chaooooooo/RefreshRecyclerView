@@ -24,7 +24,7 @@ import chao.app.refreshrecyclerview.recycleview.DataRecyclerView;
 
 public class RefreshRecyclerViewTestFragment extends Fragment {
 
-    private static final long NETWORK_DELAY = 3000;
+    private static final long NETWORK_DELAY = 1000;
 
     @Nullable
     @Override
@@ -39,7 +39,14 @@ public class RefreshRecyclerViewTestFragment extends Fragment {
                 DataItemDetail detail = new DataItemDetail();
                 DataItemResult result = new DataItemResult();
                 result.maxCount = 4000;
-                pageSize = 4;
+                pageSize = 10;
+
+                int randNumber = (int) (3 * Math.random());
+                if (randNumber % 3 == 0) {
+                    result.hasError = true;
+                } else if (randNumber % 3 == 1) {
+                    return result;
+                }
 
                 for (int i = 0; i < Math.min(result.maxCount,pageSize); i++) {
                     DataItemDetail itemDetail = detail.Copy();
