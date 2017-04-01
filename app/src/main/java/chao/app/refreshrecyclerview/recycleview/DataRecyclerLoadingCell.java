@@ -20,7 +20,7 @@ import com.jobs.lib_v1.settings.LocalStrings;
  * @author solomon.wen
  * @since 2013-12-18
  */
-public final class DataRecyclerLoadingCell extends DataRecyclerCell {
+public final class DataRecyclerLoadingCell extends DataRecyclerFooterCell {
 	private TextView mTextView = null;
 
 	@Override
@@ -58,14 +58,6 @@ public final class DataRecyclerLoadingCell extends DataRecyclerCell {
 		return rootView;
 	}
 
-	@Override
-	public final int getCellViewLayoutID() {
-		return 0;
-	}
-
-	@Override
-	public final void bindView() {
-	}
 
 	@Override
 	public final void bindData() {

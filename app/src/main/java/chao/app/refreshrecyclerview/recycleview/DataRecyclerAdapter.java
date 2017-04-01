@@ -3,10 +3,12 @@ package chao.app.refreshrecyclerview.recycleview;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 
 import com.jobs.lib_v1.app.AppUtil;
 import com.jobs.lib_v1.data.DataItemDetail;
@@ -25,6 +27,10 @@ import chao.app.refreshrecyclerview.BuildConfig;
 public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
     private static final String TAG = "DataRecyclerAdapter";
+
+    static final int OVER_SCROLLER_DISTANCE = 30;  //px
+
+    private static final int HEADER_POSITION = 0;
 
     private static final int IDLE = 1;              //  0000001
     private static final int LOADING = 1 << 1;     //  0000010
@@ -64,16 +70,22 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     private int mSelectorDrawableId; // 列表点击色drawable
 
     private DataRecyclerHeaderCell mHeaderCell;  //不支持多个header
+    private DataRecyclerFooterCell mFooterCell;
+
+    private int mRecyclerViewVisibleItemCount = 0;
+
 
     /**
      * 数据单元格样式
      */
-    private final DataRecyclerCellOrganizer mErrorOrganizer = DataRecyclerCellCenter.errorOrganizer(this);
-    private final DataRecyclerCellOrganizer mLoadingOrganizer = DataRecyclerCellCenter.loadingOrganizer(this);
-    private final DataRecyclerCellOrganizer mEmptyOrganizer = DataRecyclerCellCenter.emptyOrganizer(this);
-    private final DataRecyclerCellOrganizer mMoreOrganizer = DataRecyclerCellCenter.moreOrganizer(this);
+//    private final DataRecyclerCellOrganizer mErrorOrganizer = DataRecyclerCellCenter.errorOrganizer(this);
+//    private final DataRecyclerCellOrganizer mLoadingOrganizer = DataRecyclerCellCenter.loadingOrganizer(this);
+//    private final DataRecyclerCellOrganizer mEmptyOrganizer = DataRecyclerCellCenter.emptyOrganizer(this);
+//    private final DataRecyclerCellOrganizer mMoreOrganizer = DataRecyclerCellCenter.moreOrganizer(this);
     private final DataRecyclerCellOrganizer mDataOrganizer = DataRecyclerCellCenter.dataOrganizer(this);
     private final DataRecyclerCellOrganizer mHeaderOrganizer = DataRecyclerCellCenter.headerOrganizer(this);//不支持多个header
+//    private final DataRecyclerCellOrganizer mIdleOrganizer = DataRecyclerCellCenter.idleOrganizer(this);
+    private final DataRecyclerCellOrganizer mFooterOrganizer = DataRecyclerCellCenter.footerOrganizer(this);
 
     private OnItemClickListener mItemClickListener;
 
@@ -85,7 +97,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     DataRecyclerAdapter(DataRecyclerView recyclerView) {
         mRecyclerView = recyclerView;
         mContext = recyclerView.getContext();
-        notifyDataSetChanged();
+//        notifyDataSetChanged();
     }
 
     Context getContext() {
@@ -107,28 +119,34 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         DataRecyclerCellOrganizer organizer = getItemOrganizer(position);
         int startViewType = 0;
 
-        if (!organizer.equals(mLoadingOrganizer)) {
-            startViewType += mLoadingOrganizer.getCellTypeCount();
+        if (!organizer.equals(mFooterOrganizer)) {
+            startViewType += mFooterOrganizer.getCellTypeCount();
 
-            if (!organizer.equals(mErrorOrganizer)) {
-                startViewType += mErrorOrganizer.getCellTypeCount();
+//            if (!organizer.equals(mErrorOrganizer)) {
+//                startViewType += mErrorOrganizer.getCellTypeCount();
 
-                if (!organizer.equals(mMoreOrganizer)) {
-                    startViewType += mMoreOrganizer.getCellTypeCount();
+//                if (!organizer.equals(mMoreOrganizer)) {
+//                    startViewType += mMoreOrganizer.getCellTypeCount();
 
-                    if (!organizer.equals(mEmptyOrganizer)) {
-                        startViewType += mEmptyOrganizer.getCellTypeCount();
+//                    if (!organizer.equals(mEmptyOrganizer)) {
+//                        startViewType += mEmptyOrganizer.getCellTypeCount();
 
                         if (!organizer.equals(mHeaderOrganizer)){
                             startViewType += mHeaderOrganizer.getCellTypeCount();
-                        }
-                    }
-                }
+
+//                            if (!organizer.equals(mIdleOrganizer)) {
+//                                startViewType += mIdleOrganizer.getCellTypeCount();
+//                            }
+//                        }
+//                    }
+//                }
             }
         }
 
         return startViewType + organizer.getCellType(position);
     }
+
+
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -138,7 +156,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-        View view = holder.itemView;
+        final View view = holder.itemView;
         view.setOnClickListener(new ItemClickListener(position));
         DataRecyclerCell cell = (DataRecyclerCell) view.getTag();
         View cellView = cell.getCellView();
@@ -154,8 +172,72 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         if (mHeaderCell == null && cell instanceof DataRecyclerHeaderCell) {
             mHeaderCell = (DataRecyclerHeaderCell) cell;
             mHeaderCell.setRecyclerView(mRecyclerView);
-            mHeaderCell.refreshStatusChanged(REFRESH_REFRESHING);
+            mHeaderCell.refreshStatusChanged(REFRESH_REFRESHING);//刚进入加载页面，进入刷新状态
         }
+        if (isFooterPosition(position) && cell instanceof DataRecyclerFooterCell) {
+            mFooterCell = (DataRecyclerFooterCell) cell;
+        }
+        view.getViewTreeObserver().addOnGlobalLayoutListener(new LayoutObserver(view,position));
+    }
+
+    void requestLayout() {
+        LogHelper.i(TAG,"requestLayout.");
+        filledHeight = 0;
+    }
+
+
+    private class LayoutObserver implements ViewTreeObserver.OnGlobalLayoutListener {
+
+        private View observeView;
+        private int position;
+
+        private LayoutObserver(View view,int position) {
+            observeView = view;
+            this.position = position;
+        }
+
+        @Override
+        public void onGlobalLayout() {
+
+            int visibleCount = mRecyclerView.getChildCount();
+            int visibleItemHeight = 0;
+            if (visibleCount > mRecyclerViewVisibleItemCount) { //可见的列表项增加,重新计算footer高度
+                for (int i = 0;i < visibleCount; i++) {
+                    View view = mRecyclerView.getChildAt(i);
+                    if (view == mHeaderCell.getCellView() || view == mFooterCell.getCellView()) {
+                        continue;
+                    }
+                    visibleItemHeight += view.getHeight();
+                }
+                mFooterCell.setHeight(mRecyclerView.getHeight() - visibleItemHeight);
+                mRecyclerViewVisibleItemCount = visibleCount;
+            }
+
+
+            removeListener();
+        }
+
+
+        private void removeListener() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                observeView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+            } else {
+                observeView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+            }
+        }
+
+
+    }
+
+    private int filledHeight = 0;
+
+
+    private boolean isFooterPosition(int position) {
+        return position > getDataCount();
+    }
+
+    private boolean isItemPosition(int position) {
+        return position > HEADER_POSITION && position <= getDataCount();
     }
 
     void setDataLoader(DataLoader dataLoader) {
@@ -209,7 +291,6 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             @Override
             protected void onTaskFinished(DataItemResult result) {
-                mRecyclerData.clear();
                 appendRefreshData(result);
                 mDataLoader.onFetchDone(result);
             }
@@ -231,9 +312,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         }
     }
 
-    private synchronized void startLoadingData() {
+    private void startLoadingData() {
 
-        if (isTaskRunning(mDataLoaderTask) || hasStatus(LOADING)) {
+        if (isTaskRunning(mDataLoaderTask) || hasStatus(LOADING|REFRESH_REFRESHING)) {
             return;
         }
         mDataLoaderTask = new SilentTask() {
@@ -265,38 +346,6 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         mDataLoaderTask.executeOnPool();
     }
 
-    void setEmptyCellClass(Class<? extends DataRecyclerCell> emptyCell) {
-        mEmptyOrganizer.setCellClass(emptyCell, null);
-    }
-
-    void setEmptyCellClass(Class<? extends DataRecyclerCell> emptyCell, Object cellClassConstructorParameter) {
-        mEmptyOrganizer.setCellClass(emptyCell, cellClassConstructorParameter);
-    }
-
-    void setErrorCellClass(Class<? extends DataRecyclerCell> emptyCell) {
-        mErrorOrganizer.setCellClass(emptyCell, null);
-    }
-
-    void setErrorCellClass(Class<? extends DataRecyclerCell> emptyCell, Object cellClassConstructorParameter) {
-        mErrorOrganizer.setCellClass(emptyCell, cellClassConstructorParameter);
-    }
-
-    void setLoadingCellClass(Class<? extends DataRecyclerCell> emptyCell) {
-        mErrorOrganizer.setCellClass(emptyCell, null);
-    }
-
-    void setLoadingCellClass(Class<? extends DataRecyclerCell> emptyCell, Object cellClassConstructorParameter) {
-        mErrorOrganizer.setCellClass(emptyCell, cellClassConstructorParameter);
-    }
-
-    void setMoreCellClass(Class<? extends DataRecyclerCell> emptyCell) {
-        mErrorOrganizer.setCellClass(emptyCell, null);
-    }
-
-    void setMoreCellClass(Class<? extends DataRecyclerCell> emptyCell, Object cellClassConstructorParameter) {
-        mErrorOrganizer.setCellClass(emptyCell, cellClassConstructorParameter);
-    }
-
 
     private class DataViewHolder extends RecyclerView.ViewHolder {
 
@@ -322,11 +371,15 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
         @Override
         public void onClick(View v) {
-            if (position == 0) {//header没有点击事件
+            if (position == HEADER_POSITION) {//header没有点击事件
+                mHeaderCell.gotoTop();
                 return;
             }
             //点击的不是Item,可能是出错，为空或者下一页
             if (getItemPosition(position) >= mRecyclerData.getDataCount()) {
+                if (hasStatus(IDLE)) {
+                    return;
+                }
                 if (hasStatus(EMPTY) && mEmptyClickListener != null) {
                     if (mEmptyClickListener.onItemEmptyClickListener(v))
                         return;
@@ -353,26 +406,32 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return mDataOrganizer;
         }
 
-        switch (mStatus) {
-            case LOADING:
-                return mLoadingOrganizer;
-            case ERROR:
-                return mErrorOrganizer;
-            case EMPTY:
-                return mEmptyOrganizer;
-            case MORE:
-            default:
-                return mMoreOrganizer;
-        }
+        int loadStatus = mStatus & LOAD_STATE_MASK;
+
+//        switch (loadStatus) {
+//            case LOADING:
+//                return mLoadingOrganizer;
+//            case ERROR:
+//                return mErrorOrganizer;
+//            case EMPTY:
+//                return mEmptyOrganizer;
+//            case IDLE:
+//                return mIdleOrganizer;
+//            case MORE:
+//            default:
+//                return mMoreOrganizer;
+//        }
+        return mFooterOrganizer;
     }
 
     @Override
     public int getItemCount() {
         int count = mRecyclerData.getDataCount() + mHeaderOrganizer.getCellTypeCount();
 
-        if (!hasStatus(IDLE)) {
-            count++;
-        }
+//        if (!hasStatus(IDLE)) {
+//            count++;
+//        }
+        count++;
         return count;
     }
 
@@ -407,6 +466,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
 
+        mRecyclerData.clear();
+        mRecyclerViewVisibleItemCount = 0;
+
         if (appendData.isValidListData()) {
             //appendItems方法会置换mRecyclerData的maxCount
             mRecyclerData.appendItems(appendData);
@@ -425,6 +487,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
 
+        int oldDataCount = mRecyclerData.getDataCount();
+        int newDataCount = appendData.getDataCount();
+
         if (appendData.hasError) {
             mRecyclerData.message = appendData.message;
             mRecyclerData.hasError = true;
@@ -442,7 +507,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
 
-        toLoadStatus(hasMore()?MORE:IDLE);
+        toLoadStatus(hasMore()?MORE:IDLE,false);
+        notifyItemRangeInserted(oldDataCount,newDataCount);
+
     }
 
     DataItemDetail getItem(int position) {
@@ -466,6 +533,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     private final Object mStatusLock = new Object();
 
     private void toLoadStatus(int status) {
+        toLoadStatus(status,true);
+    }
+
+    private void toLoadStatus(int status,boolean notify) {
         synchronized (mStatusLock) {
 
             int oldLoadStatus = mStatus & LOAD_STATE_MASK;
@@ -623,23 +694,28 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             boolean atPreLoadingPosition = totalCount - lastVisibleItemPosition < visibleItemCount; //滚动到达预加载的位置
 
-
-            if (hasStatus(IDLE | MORE) && atPreLoadingPosition && hasMore()) {
-                startLoadingData();
-            }
             mHeaderCell.onScrolled(recyclerView, dx, dy);
+
+
+//            if (hasStatus(IDLE | MORE) && hasStatus(REFRESH_IDLE) && atPreLoadingPosition && hasMore()) {
+//                startLoadingData();
+//            }
 
             LogHelper.i(TAG,"onScrolled");
             if (!mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_IDLE);
+
+                if (hasStatus(IDLE | MORE) && atPreLoadingPosition && hasMore()) {
+                    startLoadingData();
+                }
             }
             if (mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_PULL);
             }
-            if (mHeaderCell.overHeader() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
+            if (mHeaderCell.overScroller() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
                 mRecyclerView.stopScroll();
             }
-            if (mHeaderCell.overHeaderRefresh() && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0 && mRecyclerData.getDataCount() > 0) {
+            if (mHeaderCell.overHeaderRefresh() && mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0 && mRecyclerData.getDataCount() > 0) {
                 LogHelper.i(TAG,"onScrolled. startLoadingData()");
                 startRefreshData();
             }

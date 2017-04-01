@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import chao.app.protocol.LogHelper;
 import chao.app.refreshrecyclerview.R;
 
 /**
@@ -137,11 +136,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         mHandler.sendHeaderMessageDelay(HeaderHandler.WHAT_CLOSE_HEADER);
     }
 
-
-    public int getHeaderHeight() {
-        return getCellView().getHeight();
-    }
-
     public void setRecyclerView(DataRecyclerView recyclerView) {
         mDataRecyclerView = recyclerView;
     }
@@ -155,8 +149,16 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         return false;
     }
 
+    public boolean overScroller() {
+        if (overHeader() && mScrollY >= getHeight() * 3 / 4) {
+            return true;
+        }
+        return false;
+
+    }
+
     public boolean overHeaderRefresh() {
-        if (overHeader() && mScrollY <= getHeaderHeight() / 4) {
+        if (overHeader() && mScrollY <= getHeight() / 4) {
             return true;
         }
         return false;
@@ -164,6 +166,18 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
 
     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
         mScrollY += dy;
+//        checkScrollY();
+
+    }
+
+    private void checkScrollY() {
+        LinearLayoutManager layoutManager = (LinearLayoutManager) mDataRecyclerView.getLayoutManager();
+        int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
+        if (firstVisibleItemPosition == 0 && mScrollY > getHeight()) {
+            mDataRecyclerView.offsetChildrenVertical(getCellView().getTop());
+            mDataRecyclerView.offsetChildrenVertical(-getHeight());
+            mScrollY = getHeight();
+        }
     }
 
     public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
@@ -218,8 +232,8 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     }
 
     private void closeHeader(boolean animation) {
-        LogHelper.i(TAG,"closeHeader");
-        int offsetY = getHeaderHeight() - mScrollY;
+//        LogHelper.i(TAG,"closeHeader");
+        int offsetY = getHeight() - mScrollY;
 //        DataLinearLayoutManager dlm = (DataLinearLayoutManager) mDataRecyclerView.getLayoutManager();
 //        dlm.offsetChildren(-getHeaderHeight());
         if (animation) {
@@ -227,6 +241,16 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         } else {
             mDataRecyclerView.scrollBy(0,offsetY + 1);
         }
+
+    }
+
+    public void back(DataRecyclerView recyclerView) {
+//        recyclerView.scrollBy(0,overScrollerLine() - mScrollY);
+//        recyclerView.smoothScrollBy(0,getHeight() - overScrollerLine());
+    }
+
+    private int overScrollerLine() {
+        return getHeight() * 3 / 4;
     }
 
     @Override

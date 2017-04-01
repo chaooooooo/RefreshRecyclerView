@@ -13,7 +13,7 @@ import com.jobs.lib_v1.settings.LocalStrings;
  * @author solomon.wen
  * @since 2013-12-18
  */
-public final class DataRecyclerEmptyCell extends DataRecyclerDataCell {
+public final class DataRecyclerEmptyCell extends DataRecyclerFooterCell {
 	@Override
 	public final View createCellView() {
 		View tmpView = super.createCellView();

@@ -14,8 +14,6 @@ import com.jobs.lib_v1.app.AppUtil;
 import com.jobs.lib_v1.data.DataItemDetail;
 import com.jobs.lib_v1.device.DeviceUtil;
 
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.T;
-
 /**
  * 单元格复用抽象类：视图、数据和ViewHolder的合集。
  *
@@ -146,7 +144,7 @@ public abstract class DataRecyclerCell {
      *
      * @return View
      */
-    public final View getCellView(){
+    public View getCellView(){
         return mCellView;
     }
 
@@ -189,5 +187,23 @@ public abstract class DataRecyclerCell {
      * 该方法由子类实现
      */
     public abstract void bindData();
+
+    /**
+     * 获取cell高度
+     */
+    public int getHeight() {
+//        if (mCellView == null) {
+//            return 0;
+//        }
+        return mCellView.getHeight();
+    }
+
+    void setHeight(int height) {
+        ViewGroup.LayoutParams lp = mCellView.getLayoutParams();
+        lp.height = height;
+//        mCellView.requestLayout();
+        mCellView.invalidate();
+    }
+
 }
 

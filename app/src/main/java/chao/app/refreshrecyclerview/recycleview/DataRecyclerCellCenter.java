@@ -78,7 +78,7 @@ public final class DataRecyclerCellCenter {
 	/**
 	 * 获取数据单元格的配置器
 	 * 配置器中会被设上默认的数据单元格
-	 * 
+	 *
 	 * @return DataRecyclerCellOrganizer
 	 */
 	public final static DataRecyclerCellOrganizer dataOrganizer(DataRecyclerAdapter adapter) {
@@ -88,6 +88,16 @@ public final class DataRecyclerCellCenter {
 
 	public static DataRecyclerCellOrganizer headerOrganizer(DataRecyclerAdapter adapter) {
 		Class<?> cellClass = getDefaultCellClass("headerCellClass", DataRecyclerHeaderCell.class);
+		return new DataRecyclerCellOrganizer(adapter, cellClass);
+	}
+
+	public static DataRecyclerCellOrganizer idleOrganizer(DataRecyclerAdapter adapter) {
+		Class<?> cellClass = getDefaultCellClass("idleCellClass", DataRecyclerIdleCell.class);
+		return new DataRecyclerCellOrganizer(adapter, cellClass);
+	}
+
+	public static DataRecyclerCellOrganizer footerOrganizer(DataRecyclerAdapter adapter) {
+		Class<?> cellClass = getDefaultCellClass("footerCellClass", DataRecyclerLoadingCell.class);
 		return new DataRecyclerCellOrganizer(adapter, cellClass);
 	}
 }

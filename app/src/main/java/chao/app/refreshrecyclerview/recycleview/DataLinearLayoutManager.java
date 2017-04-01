@@ -5,8 +5,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 
-import chao.app.protocol.LogHelper;
-
 /**
  * @author chao.qin
  * @since 2017/3/30
@@ -22,20 +20,32 @@ public class DataLinearLayoutManager extends LinearLayoutManager {
     }
 
     private void init(int orientation) {
-        mHelper = OrientationHelper.createOrientationHelper(this,orientation);
+//        mHelper = OrientationHelper.createOrientationHelper(this,orientation);
     }
 
     @Override
     public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
-        int unconsumed = super.scrollVerticallyBy(dy, recycler, state);
-        if (unconsumed > 0) {
-            mHelper.offsetChildren(unconsumed);
+        int consumed = super.scrollVerticallyBy(dy, recycler, state);
+        if (consumed > 0) {
+//            mHelper.offsetChildren(unconsumed);
         }
-        LogHelper.i("chao.qin","scrollVerticallyBy --> ","unConsumed : " + unconsumed);
-        return 0;
+//        LogHelper.i("chao.qin","scrollVerticallyBy --> ","consumed : " + consumed,"unconsumed : " + (dy - consumed));
+        return consumed;
     }
 
-    public void offsetChildren(int offset) {
-        mHelper.offsetChildren(offset);
+
+    @Override
+    public int computeVerticalScrollExtent(RecyclerView.State state) {
+        return super.computeVerticalScrollExtent(state) + 480;
+    }
+
+    @Override
+    public int computeVerticalScrollOffset(RecyclerView.State state) {
+        return super.computeVerticalScrollOffset(state) + 480;
+    }
+
+    @Override
+    public int computeVerticalScrollRange(RecyclerView.State state) {
+        return super.computeVerticalScrollRange(state) + 480;
     }
 }
