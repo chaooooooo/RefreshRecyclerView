@@ -204,6 +204,5 @@ public abstract class DataRecyclerCell {
 //        mCellView.requestLayout();
         mCellView.invalidate();
     }
-
 }
 

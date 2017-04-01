@@ -1,5 +1,6 @@
 package chao.app.refreshrecyclerview.recycleview;
 
+import android.annotation.SuppressLint;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.widget.LinearLayoutManager;
@@ -14,7 +15,7 @@ import chao.app.refreshrecyclerview.R;
  * @author chao.qin
  * @since 2017/3/28.
  */
-public class DataRecyclerHeaderCell extends DataRecyclerCell{
+public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     private static final String TAG = DataRecyclerHeaderCell.class.getSimpleName();
 
@@ -42,9 +43,10 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
     private HeaderHandler mHandler = new HeaderHandler();
 
     void detach() {
-        mHandler.detach();
+        mHandler.removeCallbacksAndMessages(null);
     }
 
+    @SuppressLint("HandlerLeak")
     private class HeaderHandler extends Handler {
 
         private static final int WHAT_REFRESH_STARTED = 1;
@@ -65,16 +67,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
             Message message = obtainMessage();
             message.what = what;
             sendEmptyMessageDelayed(what,REFRESH_STATUS_DELAY);
-        }
-
-
-        private void detach() {
-            removeMessages(WHAT_REFRESH_STARTED);
-            removeMessages(WHAT_REFRESH_PULL);
-            removeMessages(WHAT_REFRESH_FAILED);
-            removeMessages(WHAT_REFRESH_EMPTY);
-            removeMessages(WHAT_REFRESH_DONE);
-            removeMessages(WHAT_CLOSE_HEADER);
         }
 
         @Override
@@ -103,12 +95,13 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
 
         }
     }
-    public void refreshStarted() {
+
+    private void refreshStarted() {
         mText.setText(R.string.recycler_view_refreshing_text);
         mProgressBar.setVisibility(View.VISIBLE);
     }
 
-    public void refreshPulling() {
+    private void refreshPulling() {
         mText.setText(R.string.recycler_view_pre_refresh_text);
         mProgressBar.setVisibility(View.INVISIBLE);
     }
@@ -133,7 +126,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         mHandler.sendHeaderMessageDelay(HeaderHandler.WHAT_CLOSE_HEADER);
     }
 
-    public void setRecyclerView(DataRecyclerView recyclerView) {
+    void setRecyclerView(DataRecyclerView recyclerView) {
         mDataRecyclerView = recyclerView;
     }
 
@@ -146,7 +139,8 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         return false;
     }
 
-    public boolean overScroller() {
+    //松手滑动到达的可滑动的最大阈值，松手后的滑动超过头部线的阈值就不再允许继续向上滑
+    public boolean overFling() {
         if (overHeader() && mScrollY >= getHeight() * 3 / 4) {
             return true;
         }
@@ -154,6 +148,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
 
     }
 
+    //到达头部刷线，到达这个线或再往上进入刷新状态
     public boolean overHeaderRefresh() {
         if (overHeader() && mScrollY <= getHeight() / 4) {
             return true;
@@ -217,7 +212,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell{
         mDataRecyclerView.smoothScrollToPosition(0);
     }
 
-    private void closeHeader(boolean animation) {
+    private synchronized void closeHeader(boolean animation) {
         int offsetY = getHeight() - mScrollY;
         if (animation) {
             mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态

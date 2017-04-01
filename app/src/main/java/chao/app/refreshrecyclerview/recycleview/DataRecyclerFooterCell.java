@@ -39,6 +39,10 @@ public class DataRecyclerFooterCell extends DataRecyclerCell {
 
     private LoadHandler mHandler = new LoadHandler();
 
+    public void detach() {
+        mHandler.removeCallbacksAndMessages(null);
+    }
+
     private class LoadHandler extends Handler {
 
         private static final int WHAT_LOAD_EMPTY = 1;
@@ -75,8 +79,6 @@ public class DataRecyclerFooterCell extends DataRecyclerCell {
                     break;
             }
         }
-
-
     }
 
     private void showLoadIdle() {

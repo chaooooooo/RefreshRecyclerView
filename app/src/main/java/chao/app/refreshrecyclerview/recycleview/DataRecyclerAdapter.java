@@ -53,6 +53,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
     private static final boolean DEBUG = BuildConfig.DEBUG;
 
+    private static final int NO_PAGE = -1;
+    private static final int START_PAGE = 1;
+
 
     private Context mContext;
 
@@ -65,7 +68,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     private SilentTask mDataLoaderTask;
 
     private int mPageSize = 20;
-    private int mCurrentPage = 0;
+    private int mCurrentPage = NO_PAGE;
 
     private int mSelectorDrawableId; // 列表点击色drawable
 
@@ -280,8 +283,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             @Override
             protected DataItemResult doInBackground(String... params) {
-                mCurrentPage = 1;
-                return mDataLoader.fetchData(DataRecyclerAdapter.this, mCurrentPage, mPageSize);
+                return mDataLoader.fetchData(DataRecyclerAdapter.this, START_PAGE, mPageSize);
             }
 
             @Override
@@ -316,6 +318,8 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
         mDataLoaderTask = new SilentTask() {
+            public int loadPage;
+
             @Override
             protected void onPreExecute() {
                 super.onPreExecute();
@@ -325,16 +329,16 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             @Override
             protected DataItemResult doInBackground(String... params) {
-                if (mRecyclerData.getDataCount() <= 0) {
-                    mCurrentPage = 0;
+                loadPage = mCurrentPage + 1;
+                if (mCurrentPage == NO_PAGE) {
+                    loadPage = START_PAGE;
                 }
-                int currentPage = mCurrentPage + 1;
-                return mDataLoader.fetchData(DataRecyclerAdapter.this, currentPage, mPageSize);
+                return mDataLoader.fetchData(DataRecyclerAdapter.this, loadPage, mPageSize);
             }
 
             @Override
             protected void onTaskFinished(DataItemResult result) {
-                appendLoadData(result);
+                appendLoadData(result,loadPage);
                 mDataLoader.onFetchDone(result);
             }
 
@@ -449,13 +453,14 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
         mRecyclerData.clear();
         mRecyclerViewVisibleItemCount = 0;
+        mCurrentPage = NO_PAGE;
 
         if (appendData.isValidListData()) {
+            mCurrentPage = START_PAGE;
             //appendItems方法会置换mRecyclerData的maxCount
             mRecyclerData.appendItems(appendData);
         }
         notifyDataSetChanged();
-//        resizeFooterView();
 
         if (mRecyclerData.getDataCount() == 0) {
             toRefreshStatus(REFRESH_EMPTY);
@@ -465,7 +470,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         toRefreshStatus(REFRESH_DONE);
     }
 
-    private synchronized void appendLoadData(DataItemResult appendData) {
+    private synchronized void appendLoadData(DataItemResult appendData, int loadPage) {
         if (appendData == null) {
             return;
         }
@@ -479,7 +484,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
         if (appendData.isValidListData()) {
             //appendItems方法会置换mRecyclerData的maxCount
-            mCurrentPage++;
+            mCurrentPage = loadPage;
             appendData(appendData);
         }
 
@@ -533,7 +538,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         }
     }
 
-    private void toRefreshStatus(int status) {
+    void toRefreshStatus(int status) {
         synchronized (mStatusLock) {
             int oldRefreshStatus = mStatus & REFRESH_STATE_MASK;
             int newRefreshStatus = status & REFRESH_STATE_MASK;
@@ -661,7 +666,6 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         @Override
         public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
 
-            LogHelper.i(TAG,"onScroll");
             int visibleItemCount = recyclerView.getChildCount();
             int lastVisibleItemPosition = mLayoutManager.findLastVisibleItemPosition();
 
@@ -674,6 +678,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             if (!mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_IDLE);
 
+//                if (hasStatus(IDLE | MORE | ERROR | EMPTY) && atPreLoadingPosition && hasMore()) {
+//                    startLoadingData();
+//                }
+
                 if (hasStatus(IDLE | MORE) && atPreLoadingPosition && hasMore()) {
                     startLoadingData();
                 }
@@ -681,10 +689,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             if (mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_PULL);
             }
-            if (mHeaderCell.overScroller() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
+            if (mHeaderCell.overFling() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
                 mRecyclerView.stopScroll();
             }
-            if (mHeaderCell.overHeaderRefresh() && mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0 && mRecyclerData.getDataCount() > 0) {
+            if (mHeaderCell.overHeaderRefresh() && mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0) {
                 startRefreshData();
             }
         }
@@ -692,7 +700,6 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         @Override
         public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
             super.onScrollStateChanged(recyclerView, newState);
-            LogHelper.i(TAG,"onScrollStateChanged : newState " + newState);
             if (!isRefreshEnabled()) {
                 return;
             }
@@ -716,5 +723,8 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
         super.onDetachedFromRecyclerView(recyclerView);
         mHeaderCell.detach();
+        if (mFooterCell != null) {
+            mFooterCell.detach();
+        }
     }
 }
