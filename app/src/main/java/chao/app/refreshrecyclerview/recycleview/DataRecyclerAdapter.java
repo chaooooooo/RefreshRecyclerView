@@ -642,6 +642,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             case REFRESH_CANCEL:
                 statusText += " | REFRESH_CANCEL";
                 break;
+            case REFRESH_EMPTY:
+                statusText += " | REFRESH_EMPTY";
+                break;
             default:
                 statusText += " | default";
                 break;
@@ -686,8 +689,11 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
                     startLoadingData();
                 }
             }
-            if (mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
+            if (mHeaderCell.overHeader() && hasStatus(REFRESH_IDLE)) {
                 toRefreshStatus(REFRESH_PULL);
+            }
+            if (mHeaderCell.overHeaderRefresh() && hasStatus(REFRESH_REFRESHING)) {
+                mHeaderCell.moveToTop();
             }
             if (mHeaderCell.overFling() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
                 mRecyclerView.stopScroll();

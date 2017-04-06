@@ -61,12 +61,12 @@ public class RefreshRecyclerViewTestFragment extends Fragment {
                 result.maxCount = 4000;
                 pageSize = 10;
 
-                int randNumber = (int) (3 * Math.random());
-                if (randNumber % 3 == 0) {
-                    result.hasError = true;
-                } else if (randNumber % 3 == 1) {
-                    return result;
-                }
+//                int randNumber = (int) (3 * Math.random());
+//                if (randNumber % 3 == 0) {
+//                    result.hasError = true;
+//                } else if (randNumber % 3 == 1) {
+//                    return result;
+//                }
 
                 for (int i = 0; i < Math.min(result.maxCount,pageSize); i++) {
                     DataItemDetail itemDetail = detail.Copy();

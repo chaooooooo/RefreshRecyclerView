@@ -9,14 +9,11 @@ import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 
 import com.jobs.lib_v1.data.DataItemResult;
 
-import chao.app.protocol.utils.ReflectUtil;
 import chao.app.refreshrecyclerview.R;
 
 /**
@@ -59,9 +56,6 @@ public class DataRecyclerView extends RecyclerView {
         setDivider(R.drawable.default_recycle_drawable);//默认分割线
 
         addOnScrollListener(mDataAdapter.new LoadMoreScrollListener());
-
-        ViewConfiguration vc = ViewConfiguration.get(context);
-        ReflectUtil.setValue(vc,"mOverscrollDistance",200);
     }
 
     @Override
@@ -73,22 +67,6 @@ public class DataRecyclerView extends RecyclerView {
         if (mDataAdapter.canRequestLayout()) {
             super.requestLayout();
         }
-    }
-
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        return super.dispatchTouchEvent(ev);
-    }
-
-    @Override
-    public boolean onInterceptTouchEvent(MotionEvent e) {
-        return super.onInterceptTouchEvent(e);
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent e) {
-        return super.onTouchEvent(e);
     }
 
     /**

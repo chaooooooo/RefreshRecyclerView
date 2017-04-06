@@ -9,7 +9,11 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import chao.app.protocol.LogHelper;
+import chao.app.refreshrecyclerview.BuildConfig;
 import chao.app.refreshrecyclerview.R;
+
+import static chao.app.refreshrecyclerview.recycleview.DataRecyclerAdapter.statusText;
 
 /**
  * @author chao.qin
@@ -18,6 +22,9 @@ import chao.app.refreshrecyclerview.R;
 public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     private static final String TAG = DataRecyclerHeaderCell.class.getSimpleName();
+
+    private static final boolean DEBUG = true && BuildConfig.DEBUG;
+
 
     private static final int HEADER_POSITION = 0;
 
@@ -166,15 +173,20 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
             return;
         }
         if (newState == RecyclerView.SCROLL_STATE_IDLE ) {
-            if (isStatus(REFRESH_PULL)) {
-                closeHeader(true);
-            } else if (isStatus(REFRESH_REFRESHING)) {
-                gotoTop();
+            if (isStatus(REFRESH_PULL | REFRESH_DONE | REFRESH_FAILED | REFRESH_EMPTY | REFRESH_CANCEL)) {
+                mHandler.sendHeaderMessage(HeaderHandler.WHAT_CLOSE_HEADER);
             }
         }
+
+//        if (isStatus(REFRESH_REFRESHING)) {
+//            moveToTop();
+//        }
     }
 
     private boolean isStatus(int status) {
+        if (DEBUG) {
+            LogHelper.d(TAG, "current status : " + statusText(mStatus));
+        }
         return (mStatus & status) != 0;
     }
 
@@ -201,28 +213,26 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
             case REFRESH_CANCEL:
                 break;
             default:
-                throw new IllegalStateException("unknown refresh status. " + DataRecyclerAdapter.statusText(newStatus));
+                throw new IllegalStateException("unknown refresh status. " + statusText(newStatus));
         }
     }
 
-    public void gotoTop() {
-        if (!overHeader()) {
+    public void moveToTop() {
+        if (!overHeader() || !overHeaderRefresh()) {
             return;
         }
-        mDataRecyclerView.smoothScrollToPosition(0);
+        mDataRecyclerView.smoothScrollBy(0,-mScrollY);
     }
 
     private synchronized void closeHeader(boolean animation) {
         int offsetY = getHeight() - mScrollY;
         if (animation) {
             mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态
+//            mDataRecyclerView.smoothScrollToPosition(1);
+//            mDataRecyclerView.scrollBy(0,1);
         } else {
             mDataRecyclerView.scrollBy(0,offsetY + 1);
         }
-    }
-
-    private int overScrollerLine() {
-        return getHeight() * 3 / 4;
     }
 
     @Override
