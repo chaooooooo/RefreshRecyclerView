@@ -44,7 +44,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     static final int REFRESH_FAILED = 1 << 18;  //刷新失败
     static final int REFRESH_DONE = 1 << 19;    //刷新完成
     static final int REFRESH_EMPTY = 1 << 20;   //数据为空
-    static final int REFRESH_INIT = 1 << 21;    //初始化状态
+    static final int REFRESH_PREPARE_REFRESHING = 1 << 21;    //初始化状态
     static final int REFRESH_PULL = 1 << 22;    //下拉，还没到达刷新
     static final int REFRESH_CANCEL = 1 << 23;    //下拉，还没到达刷新
 
@@ -238,7 +238,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     void setDataLoader(DataLoader dataLoader) {
-        if (!hasStatus(LOADING)) {
+        if (!isStatus(LOADING)) {
             mRecyclerData.clear();
             mDataLoader = dataLoader;
             mCurrentPage = 0;
@@ -251,7 +251,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
     }
 
     void refreshData() {
-        if (isTaskRunning(mDataRefreshTask) || hasStatus(REFRESH_REFRESHING)) {
+        if (isTaskRunning(mDataRefreshTask) || isStatus(REFRESH_REFRESHING)) {
             return;
         }
         startRefreshData();
@@ -269,7 +269,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
 
-        if (isTaskRunning(mDataRefreshTask) || hasStatus(REFRESH_REFRESHING)) {
+        if (isTaskRunning(mDataRefreshTask) || isStatus(REFRESH_REFRESHING)) {
             return;
         }
         mDataRefreshTask = new SilentTask() {
@@ -314,7 +314,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             return;
         }
 
-        if (isTaskRunning(mDataLoaderTask) || hasStatus(LOADING|REFRESH_REFRESHING)) {
+        if (isTaskRunning(mDataLoaderTask) || isStatus(LOADING|REFRESH_REFRESHING)) {
             return;
         }
         mDataLoaderTask = new SilentTask() {
@@ -378,7 +378,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         public void onClick(View v) {
             //点击的不是Item,可能是出错，为空或者下一页
             if (getItemPosition(position) >= mRecyclerData.getDataCount()) {
-                if (hasStatus(EMPTY) && mEmptyClickListener != null) {
+                if (isStatus(EMPTY) && mEmptyClickListener != null) {
                     if (mEmptyClickListener.onItemEmptyClickListener(v))
                         return;
                 }
@@ -538,7 +538,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
         }
     }
 
-    void toRefreshStatus(int status) {
+    private void toRefreshStatus(int status) {
         synchronized (mStatusLock) {
             int oldRefreshStatus = mStatus & REFRESH_STATE_MASK;
             int newRefreshStatus = status & REFRESH_STATE_MASK;
@@ -645,6 +645,9 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             case REFRESH_EMPTY:
                 statusText += " | REFRESH_EMPTY";
                 break;
+            case REFRESH_PREPARE_REFRESHING:
+                statusText += " | REFRESH_PREPARE_REFRESHING";
+                break;
             default:
                 statusText += " | default";
                 break;
@@ -659,7 +662,7 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
      *
      * @return mLoadStatus是status中任意状态之一返回true
      */
-    private boolean hasStatus(int status) {
+    private boolean isStatus(int status) {
         return (mStatus & status) != 0;
     }
 
@@ -678,28 +681,29 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
 
             mHeaderCell.onScrolled(recyclerView, dx, dy);
 
-            if (!mHeaderCell.overHeader() && !hasStatus(REFRESH_REFRESHING)) {
+            if (!mHeaderCell.overHeader() && !isStatus(REFRESH_REFRESHING)) {
                 toRefreshStatus(REFRESH_IDLE);
 
-//                if (hasStatus(IDLE | MORE | ERROR | EMPTY) && atPreLoadingPosition && hasMore()) {
-//                    startLoadingData();
-//                }
 
-                if (hasStatus(IDLE | MORE) && atPreLoadingPosition && hasMore()) {
+                if (isStatus(IDLE | MORE) && atPreLoadingPosition && hasMore()) {
                     startLoadingData();
                 }
             }
-            if (mHeaderCell.overHeader() && hasStatus(REFRESH_IDLE)) {
+            if (mHeaderCell.overHeader() && isStatus(REFRESH_IDLE)) {
                 toRefreshStatus(REFRESH_PULL);
             }
-            if (mHeaderCell.overHeaderRefresh() && hasStatus(REFRESH_REFRESHING)) {
-                mHeaderCell.moveToTop();
-            }
+//            if (mHeaderCell.overHeaderRefresh() && hasStatus(REFRESH_REFRESHING)) {
+//                mHeaderCell.moveToTop();
+//            }
             if (mHeaderCell.overFling() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
                 mRecyclerView.stopScroll();
             }
-            if (mHeaderCell.overHeaderRefresh() && mRecyclerView.getScrollState() != RecyclerView.SCROLL_STATE_SETTLING && !hasStatus(REFRESH_REFRESHING | REFRESH_DONE) && dy < 0) {
-                startRefreshData();
+
+            if (isStatus(REFRESH_PULL) && mHeaderCell.overHeaderRefresh() && mRecyclerView.getScrollState() == RecyclerView.SCROLL_STATE_DRAGGING) {
+                toRefreshStatus(REFRESH_PREPARE_REFRESHING);
+            }
+            if (isStatus(REFRESH_PREPARE_REFRESHING) && !mHeaderCell.overHeaderRefresh()) {
+                toRefreshStatus(REFRESH_PULL);
             }
         }
 
@@ -708,6 +712,10 @@ public class DataRecyclerAdapter extends RecyclerView.Adapter {
             super.onScrollStateChanged(recyclerView, newState);
             if (!isRefreshEnabled()) {
                 return;
+            }
+            if (newState != RecyclerView.SCROLL_STATE_SETTLING && isStatus(REFRESH_PREPARE_REFRESHING)) {
+                mHeaderCell.moveToTop();
+                startRefreshData();
             }
             mHeaderCell.onScrollStateChanged(recyclerView, newState);
         }

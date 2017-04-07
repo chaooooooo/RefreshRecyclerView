@@ -23,7 +23,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     private static final String TAG = DataRecyclerHeaderCell.class.getSimpleName();
 
-    private static final boolean DEBUG = true && BuildConfig.DEBUG;
+    private static final boolean DEBUG = false && BuildConfig.DEBUG;
 
 
     private static final int HEADER_POSITION = 0;
@@ -35,9 +35,15 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
     private static final int REFRESH_EMPTY = DataRecyclerAdapter.REFRESH_EMPTY;   //数据为空
     private static final int REFRESH_PULL = DataRecyclerAdapter.REFRESH_PULL;   //数据为空
     private static final int REFRESH_CANCEL = DataRecyclerAdapter.REFRESH_CANCEL;   //数据为空
+    private static final int REFRESH_PREPARE_REFRESHING = DataRecyclerAdapter.REFRESH_PREPARE_REFRESHING;
 
 
     private static final int REFRESH_STATUS_DELAY = 500;
+
+    private static final int REFRESH_MODE_RELEASE = 1;
+    private static final int REFRESH_MODE_AUTO = 2;
+
+    private int mRefreshMode = REFRESH_MODE_RELEASE;
 
     private TextView mText = null;
     private ProgressBar mProgressBar;
@@ -61,6 +67,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         private static final int WHAT_REFRESH_FAILED = 3;
         private static final int WHAT_REFRESH_DONE = 4;
         private static final int WHAT_REFRESH_EMPTY = 5;
+        private static final int WHAT_REFRESH_READY_REFRESH = 6;
 
         private static final int WHAT_CLOSE_HEADER = 10;
 
@@ -98,9 +105,17 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
                 case WHAT_CLOSE_HEADER:
                     closeHeader(true);
                     break;
+                case WHAT_REFRESH_READY_REFRESH:
+                    refreshReady();
+                    break;
             }
 
         }
+    }
+
+    private void refreshReady() {
+        mText.setText(R.string.recycler_view_ready_text);
+        mProgressBar.setVisibility(View.GONE);
     }
 
     private void refreshStarted() {
@@ -208,6 +223,9 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
             case REFRESH_EMPTY:
                 mHandler.sendHeaderMessage(HeaderHandler.WHAT_REFRESH_EMPTY);
                 break;
+            case REFRESH_PREPARE_REFRESHING:
+                mHandler.sendHeaderMessage(HeaderHandler.WHAT_REFRESH_READY_REFRESH);
+                break;
             case REFRESH_IDLE:
                 break;
             case REFRESH_CANCEL:
@@ -228,8 +246,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         int offsetY = getHeight() - mScrollY;
         if (animation) {
             mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态
-//            mDataRecyclerView.smoothScrollToPosition(1);
-//            mDataRecyclerView.scrollBy(0,1);
         } else {
             mDataRecyclerView.scrollBy(0,offsetY + 1);
         }

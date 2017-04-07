@@ -27,7 +27,7 @@ import chao.app.refreshrecyclerview.recycleview.OnItemClickListener;
 
 public class RefreshRecyclerViewTestFragment extends Fragment {
 
-    private static final long NETWORK_DELAY = 1000;
+    private static final long NETWORK_DELAY = 500;
 
     @Nullable
     @Override
@@ -59,7 +59,7 @@ public class RefreshRecyclerViewTestFragment extends Fragment {
                 DataItemDetail detail = new DataItemDetail();
                 DataItemResult result = new DataItemResult();
                 result.maxCount = 4000;
-                pageSize = 10;
+                pageSize = 30;
 
 //                int randNumber = (int) (3 * Math.random());
 //                if (randNumber % 3 == 0) {
