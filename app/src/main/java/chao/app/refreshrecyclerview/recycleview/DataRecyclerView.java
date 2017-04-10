@@ -17,13 +17,21 @@ import com.jobs.lib_v1.data.DataItemResult;
 import chao.app.refreshrecyclerview.R;
 
 /**
+ *
+ *  支持上拉加载，下拉刷新的RecyclerView
+ *
+ *  注意Fragment中使用RecyclerView时，如果存在有复用RootView方案的情况，
+ *  请不要销毁Fragment，这样会导致RecyclerView头部不收缩
+ *
+ *  @see com.yjs.android.pages.TabFragment.MyPageAdapter#destroyItem(ViewGroup, int, Object)
+ *
  * @author chao.qin
  * @since 2017/3/7.
  */
 
 public class DataRecyclerView extends RecyclerView {
 
-    private static final java.lang.String TAG = DataRecyclerView.class.getSimpleName();
+    private static final String TAG = DataRecyclerView.class.getSimpleName();
     private DataRecyclerAdapter mDataAdapter;
 
     private LinearLayoutManager mLayoutManager;
@@ -47,7 +55,8 @@ public class DataRecyclerView extends RecyclerView {
 
     private void init(Context context) {
         mDataAdapter = new DataRecyclerAdapter(this);
-        mLayoutManager = new LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false);
+        mLayoutManager = new DataLinearLayoutManager(context, LinearLayoutManager.VERTICAL,false);
+//        mLayoutManager = new LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false);
         setLayoutManager(mLayoutManager);
         setAdapter(mDataAdapter);
 
@@ -56,17 +65,6 @@ public class DataRecyclerView extends RecyclerView {
         setDivider(R.drawable.default_recycle_drawable);//默认分割线
 
         addOnScrollListener(mDataAdapter.new LoadMoreScrollListener());
-    }
-
-    @Override
-    public void requestLayout() {
-        if (mDataAdapter == null) {
-            super.requestLayout();
-            return;
-        }
-        if (mDataAdapter.canRequestLayout()) {
-            super.requestLayout();
-        }
     }
 
     /**
@@ -103,6 +101,14 @@ public class DataRecyclerView extends RecyclerView {
         addItemDecoration(mDividerDecoration);
     }
 
+    public void refreshData() {
+        mDataAdapter.refreshData();
+    }
+
+    public void notifyDataSetChanged(){
+        mDataAdapter.notifyDataSetChanged();
+    }
+
     public void setOnItemClickListener(OnItemClickListener listener) {
         mDataAdapter.setOnItemClickListener(listener);
     }
@@ -123,8 +129,24 @@ public class DataRecyclerView extends RecyclerView {
         setDataCellSelector(selector, null);
     }
 
+    public void setOnEmptyClickListener(DataRecyclerAdapter.OnEmptyClickListener listener) {
+        mDataAdapter.setOnEmptyClickListener(listener);
+    }
+
+    public DataRecyclerAdapter getDataAdapter() {
+        return mDataAdapter;
+    }
+
+    public void setEmptyCellClass(Class<? extends DataRecyclerCell> emptyCellClass) {
+        mDataAdapter.setEmptyCellClass(emptyCellClass,null);
+    }
+
+    public void setEmptyCellClass(Class<? extends DataRecyclerCell> emptyCellClass, Object cellClassConstructorParameter) {
+        mDataAdapter.setEmptyCellClass(emptyCellClass,cellClassConstructorParameter);
+    }
+
     public void setOnItemEmptyClickListener(OnItemEmptyClickListener listener) {
-        mDataAdapter.setOnItemEmptyClickListener(listener);
+        //// TODO: 2017/4/7 去掉
     }
 
     private class DividerDecoration extends ItemDecoration {

@@ -58,7 +58,7 @@ public class RefreshRecyclerViewTestFragment extends Fragment {
                 SystemClock.sleep(NETWORK_DELAY);
                 DataItemDetail detail = new DataItemDetail();
                 DataItemResult result = new DataItemResult();
-                result.maxCount = 4000;
+                result.maxCount = 4;
                 pageSize = 30;
 
 //                int randNumber = (int) (3 * Math.random());

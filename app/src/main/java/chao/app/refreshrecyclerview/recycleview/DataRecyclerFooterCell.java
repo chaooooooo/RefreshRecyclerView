@@ -1,6 +1,5 @@
 package chao.app.refreshrecyclerview.recycleview;
 
-import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
@@ -29,6 +28,8 @@ public class DataRecyclerFooterCell extends DataRecyclerCell {
     private static final int EMPTY = DataRecyclerAdapter.EMPTY;       //  0000100
     private static final int ERROR = DataRecyclerAdapter.ERROR;        //  0001000
     private static final int MORE = DataRecyclerAdapter.MORE;         //  0010000
+
+    private static final int DEFAULT_FOOTER_VIEW_HEIGHT = 40;
 
     private TextView mLoadMessageView;
     private ProgressBar mProgressBar;
@@ -141,11 +142,12 @@ public class DataRecyclerFooterCell extends DataRecyclerCell {
             return mContainer;
         }
         mContainer = new LinearLayout(mAdapter.getContext());
-        mContainer.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        mContainer.setBackgroundColor(Color.RED);
+        mContainer.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, getDefaultFooterHeight()));
+//        mContainer.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT));
+//        mContainer.setBackgroundColor(Color.RED);
         mContainer.setMinimumHeight(OVER_SCROLLER_DISTANCE);
 //        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.WRAP_CONTENT);
-        mContentView.setBackgroundColor(Color.BLUE);
+//        mContentView.setBackgroundColor(Color.BLUE);
         mContainer.addView(mContentView);
 
         mContainer.setTag(this);
@@ -154,17 +156,33 @@ public class DataRecyclerFooterCell extends DataRecyclerCell {
 
     @Override
     void setHeight(int height) {
+        if (mContainer.getHeight() == height) {
+            return;
+        }
+//        LogHelper.i(TAG,"setFooterHeight : " + height);
+        ViewGroup.LayoutParams lp = mContainer.getLayoutParams();
+        lp.height = height;
+        mContainer.setLayoutParams(lp);
+    }
+
+    void setAdviceHeight(int height) {
         int oldHeight = mContainer.getHeight();
-        int minHeight = mContentView.getHeight() + OVER_SCROLLER_DISTANCE;
+        int minHeight = getDefaultFooterHeight();
+//        int minHeight = mContentView.getHeight() + OVER_SCROLLER_DISTANCE;
         height = Math.max(height,minHeight);
         //todo 这个地方有点奇怪，oldHeight和实际显示的值不一致。需要重新设置height
 //        if (height == oldHeight) {
 //            return;
 //        }
-        LogHelper.i(TAG,"setFooterHeight " + height,"oldHeight " + oldHeight);
+        LogHelper.i(TAG,"advice setFooterHeight " + height,"oldHeight " + oldHeight);
         ViewGroup.LayoutParams lp = mContainer.getLayoutParams();
         lp.height = height;
         mContainer.setLayoutParams(lp);
+    }
+
+    private int getDefaultFooterHeight() {
+        float density = mContainer.getResources().getDisplayMetrics().density ;
+        return (int) ((density * DEFAULT_FOOTER_VIEW_HEIGHT + 0.5f) + OVER_SCROLLER_DISTANCE);
     }
 
 

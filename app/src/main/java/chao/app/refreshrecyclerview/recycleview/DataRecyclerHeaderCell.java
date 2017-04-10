@@ -40,11 +40,6 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     private static final int REFRESH_STATUS_DELAY = 500;
 
-    private static final int REFRESH_MODE_RELEASE = 1;
-    private static final int REFRESH_MODE_AUTO = 2;
-
-    private int mRefreshMode = REFRESH_MODE_RELEASE;
-
     private TextView mText = null;
     private ProgressBar mProgressBar;
 
@@ -59,6 +54,29 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         mHandler.removeCallbacksAndMessages(null);
     }
 
+    private int deltaY;
+    private final Object deltaLock = new Object();
+
+    public  int computeScaledDyLock(int dy) {
+        synchronized (deltaLock) {
+            if (isStatus(REFRESH_PULL) && dy < 0) {
+                deltaY += (int) (dy / 2.5);
+            } else {
+                deltaY += dy;
+            }
+            return deltaY;
+        }
+    }
+
+    public  int computeScaledDy(int dy) {
+        deltaY = dy;
+        if (isStatus(REFRESH_PULL) && dy < 0) {
+            deltaY = (int) (dy / 2.5);
+//            deltaY = dy;
+        }
+        return deltaY;
+    }
+
     @SuppressLint("HandlerLeak")
     private class HeaderHandler extends Handler {
 
@@ -68,6 +86,8 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         private static final int WHAT_REFRESH_DONE = 4;
         private static final int WHAT_REFRESH_EMPTY = 5;
         private static final int WHAT_REFRESH_READY_REFRESH = 6;
+        private static final int WHAT_REFRESH_IDLE = 7;
+
 
         private static final int WHAT_CLOSE_HEADER = 10;
 
@@ -103,14 +123,36 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
                     refreshDone();
                     break;
                 case WHAT_CLOSE_HEADER:
-                    closeHeader(true);
+                    shrinkHeader(true);
                     break;
                 case WHAT_REFRESH_READY_REFRESH:
                     refreshReady();
                     break;
+                case WHAT_REFRESH_IDLE:
+                    refreshIdle();
+                    break;
             }
 
         }
+    }
+
+    private void shrinkHeader(boolean animation) {
+        mAdapter.shrinkHeader(animation);
+    }
+
+    int idlePosition() {
+        return getHeight() + 1;
+    }
+
+    int getScrollY() {
+        return mScrollY;
+    }
+
+    private void refreshIdle() {
+        if (idlePosition() == mScrollY) {
+            return;
+        }
+//        mDataRecyclerView.smoothScrollBy(0,mScrollY - getHeight());
     }
 
     private void refreshReady() {
@@ -139,7 +181,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         mText.setText(R.string.recycler_view_refresh_failed_text);
         mProgressBar.setVisibility(View.INVISIBLE);
         mHandler.sendHeaderMessageDelay(HeaderHandler.WHAT_CLOSE_HEADER);
-
+        mAdapter.onRefreshFailed();
     }
 
     private void refreshDataEmpty() {
@@ -172,7 +214,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     //到达头部刷线，到达这个线或再往上进入刷新状态
     public boolean overHeaderRefresh() {
-        if (overHeader() && mScrollY <= getHeight() / 4) {
+        if (overHeader() && mScrollY <= getHeight() / 5) {
             return true;
         }
         return false;
@@ -181,21 +223,45 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
 
     public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
         mScrollY += dy;
+//        mScrollY += deltaY;
+        if (dy > 0 && mScrollY == idlePosition()) {
+            onHeaderShrank();
+        }
+    }
+
+    public void onScrolledLock(RecyclerView recyclerView, int dx, int dy) {
+//        mScrollY += dy;
+        synchronized (deltaLock) {
+            mScrollY += deltaY;
+            deltaY = 0;
+            if (dy > 0 && mScrollY == idlePosition()) {
+                onHeaderShrank();
+            }
+        }
+    }
+
+    private void onHeaderShrank() {
+        mAdapter.resizeFooterView();
     }
 
     public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
         if (!overHeader()) {
             return;
         }
-        if (newState == RecyclerView.SCROLL_STATE_IDLE ) {
-            if (isStatus(REFRESH_PULL | REFRESH_DONE | REFRESH_FAILED | REFRESH_EMPTY | REFRESH_CANCEL)) {
-                mHandler.sendHeaderMessage(HeaderHandler.WHAT_CLOSE_HEADER);
-            }
+        switch (newState) {
+            case RecyclerView.SCROLL_STATE_IDLE:
+                if (isStatus(REFRESH_PULL | REFRESH_DONE | REFRESH_FAILED | REFRESH_EMPTY | REFRESH_CANCEL)) {
+                    mHandler.sendHeaderMessage(HeaderHandler.WHAT_CLOSE_HEADER);
+                } else if (isStatus(REFRESH_PREPARE_REFRESHING)) {
+                    mAdapter.readyForRefresh(true);
+                }
+                break;
+            case RecyclerView.SCROLL_STATE_DRAGGING:
+                break;
+            case RecyclerView.SCROLL_STATE_SETTLING:
+                break;
         }
 
-//        if (isStatus(REFRESH_REFRESHING)) {
-//            moveToTop();
-//        }
     }
 
     private boolean isStatus(int status) {
@@ -227,6 +293,7 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
                 mHandler.sendHeaderMessage(HeaderHandler.WHAT_REFRESH_READY_REFRESH);
                 break;
             case REFRESH_IDLE:
+                mHandler.sendHeaderMessage(HeaderHandler.WHAT_REFRESH_IDLE);
                 break;
             case REFRESH_CANCEL:
                 break;
@@ -235,21 +302,15 @@ public class DataRecyclerHeaderCell extends DataRecyclerCell {
         }
     }
 
-    public void moveToTop() {
-        if (!overHeader() || !overHeaderRefresh()) {
-            return;
+    public boolean atTop(){
+        if (mScrollY <= 0) {
+            mScrollY = 0;
+            return true;
         }
-        mDataRecyclerView.smoothScrollBy(0,-mScrollY);
+        return false;
     }
 
-    private synchronized void closeHeader(boolean animation) {
-        int offsetY = getHeight() - mScrollY;
-        if (animation) {
-            mDataRecyclerView.smoothScrollBy(0, offsetY + 1); // +1 使refresh_status进入idle状态
-        } else {
-            mDataRecyclerView.scrollBy(0,offsetY + 1);
-        }
-    }
+
 
     @Override
     public final int getCellViewLayoutID() {

@@ -53,4 +53,9 @@ public final class DataRecyclerCellCenter {
 		Class<?> cellClass = getDefaultCellClass("footerCellClass", DataRecyclerFooterCell.class);
 		return new DataRecyclerCellOrganizer(adapter, cellClass);
 	}
+
+	public static DataRecyclerCellOrganizer emptyOrganizer(DataRecyclerAdapter adapter) {
+		Class<?> cellClass = getDefaultCellClass("emptyCellClass", DataRecyclerEmptyCell.class);
+		return new DataRecyclerCellOrganizer(adapter, cellClass);
+	}
 }
